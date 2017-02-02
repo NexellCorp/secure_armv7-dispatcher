@@ -30,9 +30,6 @@
 .global BootMain
 .global SubCPUBoot
 .global monitor_mode_init
-.global s5p4418_tee_bclkwait
-.global s5p4418_tee_bclk
-.global s5p4418_tee_suspend
 .text
 //==================================================================
 // vectors
@@ -156,31 +153,19 @@ main:
 	// R1 : ?
 	// R2 : boot config structure
 .global secure_launch
-// void secure_launch(isresume, secureos, non_secure);
+//secure_launch(isresume, secureos_startaddr, non_secure_bl, bootarg_addr);
 secure_launch:
 	mov	r11, r1
+	msr CPSR_c,  #(Mode_SVC|I_Bit) /* switch to SVC mode */
 
 	mov	lr, r2		// non_secure bl launch address
-	ldr	r2, =bootcfg_tee
+	mov	r1, r3		// g_bootarg_tee
 
 	mov	r3, #0
 	mcr	p15, 0, r3, c7, c5, 0	//; invalidate all instruction caches
 	mcr	p15, 0, r3, c7, c5, 6	//; BPIALL - Invalidate entire branch predictor array
 
 	bx	r11		// secure os launch address
-
-.global bootcfg_tee
-bootcfg_tee:
-	.word CPU0_STACK_BASE
-	.word CPU1_STACK_BASE
-	.word CPU2_STACK_BASE
-	.word CPU3_STACK_BASE
-// void s5p4418_tee_bclkwait(void);
-	.word =s5p4418_tee_bclkwait
-// void s5p4418_tee_bclk(unsigned int pll_data);
-	.word =s5p4418_tee_bclk
-// void s5p4418_tee_suspend(void);
-	.word =s5p4418_tee_suspend
 
 .global non_secure_launch
 // void non_secure_launch(isresume, non_secure);
@@ -266,4 +251,3 @@ physical_start:
 	b	.				// this time, core power will be off and so cpu will die.
 
 	.ltorg
-
