@@ -20,11 +20,53 @@
 #include "sysheader.h"
 
 extern void buildinfo(void);
-extern void secure_launch(CBOOL isresume, U32 secureos_startaddr, U32 non_secure_bl);
+extern void secure_launch(CBOOL isresume, U32 secureos_startaddr,
+							U32 non_secure_bl, U32 bootarg_addr);
 extern void non_secure_launch(CBOOL isresume, U32 non_secure_bl);
+
+extern void s5p4418_tee_bclkwait(void);
+extern void s5p4418_tee_bclk(unsigned int pll_data, int wait_flag);
+extern void s5p4418_tee_suspend(void);
+
 void tieoff_set_secure(void);
 void device_reset(void);
 extern U32 g_subcpu_ep;
+
+struct {
+	U32 sec_arg[6];
+	void (*tee_bclkwait)(void);
+	void (*tee_bclk)(U32, int);
+	void (*tee_suspend)(void);
+}g_bootarg_tee;
+
+void secureos_bootarg(void)
+{
+	U32 secureos_id =	((((U32)'W') <<  24)|
+						(((U32)'A') <<  16)	|
+						(((U32)'R') << 8)	|
+						(((U32)'E') << 0));
+
+	if ((U32)pReg_ClkPwr->SCRATCH[2] == secureos_id)
+	{
+		g_bootarg_tee.sec_arg[0] = SRAM_STACK_BASE;
+		g_bootarg_tee.sec_arg[1] = SRAM_STACK_OFFSET;
+		g_bootarg_tee.tee_bclkwait = &s5p4418_tee_bclkwait;
+		g_bootarg_tee.tee_bclk = &s5p4418_tee_bclk;
+		g_bootarg_tee.tee_suspend = &s5p4418_tee_suspend;
+	}
+	else
+	{
+		g_bootarg_tee.sec_arg[0] = SECOS_MAGIC_NUM;
+		g_bootarg_tee.sec_arg[1] = 0x1;
+		g_bootarg_tee.sec_arg[2] = DRAM_BASE;
+		g_bootarg_tee.sec_arg[3] = DRAM_SIZE;
+		g_bootarg_tee.sec_arg[4] = SEC_DRAM_BASE;
+		g_bootarg_tee.sec_arg[5] = SEC_DRAM_SIZE;
+		g_bootarg_tee.tee_bclkwait = &s5p4418_tee_bclkwait;
+		g_bootarg_tee.tee_bclk = &s5p4418_tee_bclk;
+		g_bootarg_tee.tee_suspend = &s5p4418_tee_suspend;
+	}
+}
 
 void BootMain(CBOOL isresume, U32 non_secure_bl, U32 secureos_startaddr)
 {
@@ -64,9 +106,11 @@ void BootMain(CBOOL isresume, U32 non_secure_bl, U32 secureos_startaddr)
 
 	if (secureos_startaddr) {
 		SYSMSG("Launch to secure 0x%08X\r\n", (U32)secureos_startaddr);
+		if (!isresume)
+			secureos_bootarg();
 		while (!DebugIsUartTxDone())
 			;
-		secure_launch(isresume, secureos_startaddr, non_secure_bl);
+		secure_launch(isresume, secureos_startaddr, non_secure_bl, (U32)&g_bootarg_tee);
 	} else {
 		if (isresume)
 			non_secure_bl = pSBI->EntryPoint;

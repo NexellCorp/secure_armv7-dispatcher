@@ -160,8 +160,6 @@ void s5p4418_tee_bclkwait(void)
 
 void s5p4418_tee_bclk(unsigned int pll_data, int wait_flag)
 {
-	int cpu_id = armv7_get_cpuid();
-
 	while (wait_flag != tee_wait_bclk_dfs_flag)
 		;
 
