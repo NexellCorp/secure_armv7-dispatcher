@@ -148,22 +148,35 @@ void s5p4418_bclk_dfs(unsigned int pll_data)
 	cpu_up_force();
 }
 
-unsigned int tee_wait_bclk_dfs_flag;
+volatile unsigned int tee_wait_bclk_dfs_flag[4] = {0};
 void s5p4418_tee_bclkwait(void)
 {
 	int cpu_id = armv7_get_cpuid();
 
-	tee_wait_bclk_dfs_flag |= (1 << cpu_id);
-	while (tee_wait_bclk_dfs_flag & (1 << cpu_id))
-		;
+	tee_wait_bclk_dfs_flag[cpu_id] = 1;
+	/* Wait until PLL freq change is done */
+	while (tee_wait_bclk_dfs_flag[cpu_id]);
 }
 
-void s5p4418_tee_bclk(unsigned int pll_data, int wait_flag)
+void s5p4418_tee_bclk(unsigned int pll_data, unsigned int wait_flag)
 {
-	while (wait_flag != tee_wait_bclk_dfs_flag)
-		;
+    unsigned int read_flag = 0;
+    unsigned int i = 0;
+    /* Waiting for all other cores to be in s5p4418_tee_bclkwait() */
+    do
+    {
+        read_flag = 0;
+        for (i = 0; i < 4; i++)
+        {
+            read_flag |= tee_wait_bclk_dfs_flag[i] << i;
+        }
+    } while (wait_flag != read_flag);
 
 	s5p4418_bclk_freqchange(pll_data);
 
-	tee_wait_bclk_dfs_flag = 0;
+    /* Release the other cores */
+    for (i = 0; i < 4; i++)
+    {
+        tee_wait_bclk_dfs_flag[i] = 0;
+    }
 }
