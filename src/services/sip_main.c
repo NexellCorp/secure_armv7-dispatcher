@@ -98,7 +98,7 @@ int sip_smc_handler(unsigned int smc_fid,
 		break;
 
 	default:
-		WARN("Unimplemented SIP Service Call: 0x%x\r\n", smc_fid);
+//		WARN("Unimplemented SIP Service Call: 0x%x\r\n", smc_fid);
 		break;
 	}
 
