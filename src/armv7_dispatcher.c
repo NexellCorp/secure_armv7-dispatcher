@@ -26,7 +26,7 @@ extern void non_secure_launch(CBOOL isresume, U32 non_secure_bl);
 
 extern void s5p4418_tee_bclkwait(void);
 extern void s5p4418_tee_bclk(unsigned int pll_data, int wait_flag);
-extern void s5p4418_tee_suspend(void);
+extern void s5p4418_tee_suspend(unsigned int sec_entrypoint);
 
 void tieoff_set_secure(void);
 void device_reset(void);
