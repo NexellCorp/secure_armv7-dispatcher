@@ -58,9 +58,9 @@ static void suspend_mark(unsigned int state, unsigned int entrypoint,
  *************************************************************/
 int psci_cpu_suspend_start(unsigned int entrypoint)
 {
-	printf("suspend start with ep:%X\r\n", entrypoint);
-	while (!DebugIsUartTxDone())
-		;
+//	printf("suspend start with ep:%X\r\n", entrypoint);
+//	while (!DebugIsUartTxDone())
+//		;
 
 	/* s5pxx18 suspend mark */
 	suspend_mark(PSCI_SUSPEND, entrypoint, 0, 0x91080000, (128 * 1024));
