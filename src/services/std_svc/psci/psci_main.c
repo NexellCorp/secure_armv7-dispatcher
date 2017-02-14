@@ -113,8 +113,6 @@ int psci_system_suspend(unsigned int entrypoint, unsigned int context_id)
 	int rc = 0;
 
 	context_id = context_id;
-	DebugInit(3);
-	printf("%s %x\r\n", __func__, entrypoint);
 
 	rc = psci_cpu_suspend_start(entrypoint);
 

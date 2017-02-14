@@ -53,28 +53,55 @@ static void suspend_mark(unsigned int state, unsigned int entrypoint,
 	}
 }
 
+#define L2C_BASE	0xCF000000
+void s5p4418_l2c_disable(void)
+{
+	unsigned int cache_way = (1 << 16) - 1;		// there are 16 cache ways
+
+	if ((ReadIO32(L2C_BASE + 0x100) & 1) == 0)	// check ctrl enabled
+		return;
+
+	WriteIO32(L2C_BASE + 0x7fc, cache_way);		// 16 way, clean inv way
+	while (ReadIO32(L2C_BASE + 0x7fc) & cache_way)
+		;
+	WriteIO32(L2C_BASE + 0x730, 0);			// cache sync;
+
+	while (ReadIO32(L2C_BASE + 0x77c) & cache_way)	// check inv way
+		;
+	while (ReadIO32(L2C_BASE + 0x7bc) & cache_way)	// check clean way
+		;
+	while (ReadIO32(L2C_BASE + 0x7fc) & cache_way)	// check clean inv way
+		;
+	WriteIO32(L2C_BASE + 0x100, 0);			// ctrl disable
+}
+
 /*************************************************************
  * Designed to meet the the PSCI Common Interface.
  *************************************************************/
-int psci_cpu_suspend_start(unsigned int entrypoint)
+void flushL1cache(void);
+void plat_suspend(unsigned int entrypoint)
 {
-//	printf("suspend start with ep:%X\r\n", entrypoint);
-//	while (!DebugIsUartTxDone())
-//		;
-
 	/* s5pxx18 suspend mark */
 	suspend_mark(PSCI_SUSPEND, entrypoint, 0, 0x91080000, (128 * 1024));
 
 	/* the function for operation to go sleep */
 	system_sleep();
 	__asm__ __volatile__ ("wfi");
+}
+
+int psci_cpu_suspend_start(unsigned int entrypoint)
+{
+	flushL1cache();
+	s5p4418_l2c_disable();
+
+	plat_suspend(entrypoint);
 
 	return PSCI_E_SUCCESS;
 }
 
 void s5p4418_tee_suspend(unsigned int sec_entrypoint)
 {
-	psci_cpu_suspend_start(sec_entrypoint);
+	plat_suspend(sec_entrypoint);
 }
 
 /*************************************************************
