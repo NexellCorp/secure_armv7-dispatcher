@@ -106,6 +106,13 @@ finished:
 
 	bx	lr
 
+.global flushL1cache
+flushL1cache:
+	push	{r0-r12, lr}
+	bl	InvalidateDataCache
+	pop	{r0-r12, pc}
+
+
 //==================================================================
 // Cache control
 //==================================================================
