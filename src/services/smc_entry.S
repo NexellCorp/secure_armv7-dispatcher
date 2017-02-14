@@ -77,7 +77,7 @@ monitor_mode_init:
 	mov	lr, #0		// svc lr
 	mov	sp, #0		// svc sp
 	/* Switch to monitor mode  */
-	msr	CPSR_c,  #(MODE_MON | I_Bit)
+	msr	CPSR_c,  #(MODE_MON | I_Bit | F_Bit)
 
         mrc     p15, 0, r0, c1, c0, 0               	// Read CP15 System Control register
         bic     r0, r0, #(BIT1_V|BIT1_I|BIT1_Z)     	// Clear V:13, I:12, Z:11 bit to disable High Vector, I-Cache, Branch Prediction
@@ -87,7 +87,7 @@ monitor_mode_init:
 	/* Stack size set to monitor mode  */
 	ldr     sp, =BASEADDR_SRAM
 	add     sp, sp, #INTERNAL_SRAM_SIZE
-	
+
 	mrc     p15, 0, r12, c0, c0, 5		// Get our cpu id
 	ands    r12, r12, #0xF			// Save CPU id
 
