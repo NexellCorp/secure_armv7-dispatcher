@@ -22,13 +22,10 @@ void tieoff_set_secure(void)
 	unsigned int value;
 
 	value = 0xFFFFFFFF;
-//	value &= ~(1 << 29 | 1 << 25);	// tieoff, crypto
+	value &= ~(1 << 29 | 1 << 25);	// tieoff, crypto
 	pReg_Tieoff->TIEOFFREG[26] = value;
 
-//	value = 0x1FF;		//VIP, DISP, SCALER
-//	pReg_Tieoff->TIEOFFREG[28] = value;
-
-//	value = 0xFFFFFFFF;
+	value = 0xFFFFFFFF;
 	value &= ~(1 << 3);	// sram
 	pReg_Tieoff->TIEOFFREG[30] = value;
 }
