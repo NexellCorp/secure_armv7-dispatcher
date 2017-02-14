@@ -20,6 +20,10 @@
 
 /* External function */
 extern void s5p4418_bclk_dfs(unsigned int pll_data);
+#define PHY_BASEADDR_PL310_MODULE	0xCF000000
+
+#define ADDRMASK_4K			0xFFFFF000
+#define ADDRMASK_64K			0xFFFF0000
 
 /* Macro for Secure Write/Read  */
 #define S5PXX18_REG_WRITE		0x82000000
@@ -30,6 +34,8 @@ extern void s5p4418_bclk_dfs(unsigned int pll_data);
 #define S5PXX18_MALI_REG_READ		0x82000103
 #define S5PXX18_MIPI_REG_WRITE		0x82000104
 #define S5PXX18_MIPI_REG_READ		0x82000105
+#define S5PXX18_TIEOFF_REG_WRITE	0x82000106
+#define S5PXX18_TIEOFF_REG_READ		0x82000107
 
 #define S5PXX18_REG_BCLK		0x82000009
 
@@ -76,21 +82,55 @@ int sip_smc_handler(unsigned int smc_fid,
 		return secure_read((void*)r1);
 
 	case S5PXX18_L2C_REG_WRITE:
+		if (r1 & ADDRMASK_4K)
+			break;
+		r1 += PHY_BASEADDR_PL310_MODULE;
 		return secure_write((void*)r1, (int)r2);
 
 	case S5PXX18_L2C_REG_READ:
+		if (r1 & ADDRMASK_4K)
+			break;
+		r1 += PHY_BASEADDR_PL310_MODULE;
 		return secure_read((void*)r1);
 
 	case S5PXX18_MALI_REG_WRITE:
+		if (r1 & ADDRMASK_64K)
+			break;
+		r1 += PHY_BASEADDR_MALI400_MODULE;
 		return secure_write((void*)r1, (int)r2);
 
 	case S5PXX18_MALI_REG_READ:
+		if (r1 & ADDRMASK_64K)
+			break;
+		r1 += PHY_BASEADDR_MALI400_MODULE;
 		return secure_read((void*)r1);
 
 	case S5PXX18_MIPI_REG_WRITE:
+		if (r1 & ADDRMASK_4K)
+			break;
+		r1 += PHY_BASEADDR_MIPI_MODULE;
 		return secure_write((void*)r1, (int)r2);
 
 	case S5PXX18_MIPI_REG_READ:
+		if (r1 & ADDRMASK_4K)
+			break;
+		r1 += PHY_BASEADDR_MIPI_MODULE;
+		return secure_read((void*)r1);
+
+	case S5PXX18_TIEOFF_REG_WRITE:
+		if (r1 & ADDRMASK_4K)
+			break;
+		if ((r1 == 0) || (r1 == 0x60) || (r1 >= 0x68))
+			break;
+		r1 += PHY_BASEADDR_TIEOFF_MODULE;
+		return secure_write((void*)r1, (int)r2);
+
+	case S5PXX18_TIEOFF_REG_READ:
+		if (r1 & ADDRMASK_4K)
+			break;
+		if ((r1 == 0) || (r1 == 0x60) || (r1 >= 0x68))
+			break;
+		r1 += PHY_BASEADDR_TIEOFF_MODULE;
 		return secure_read((void*)r1);
 
 	case S5PXX18_REG_BCLK:
