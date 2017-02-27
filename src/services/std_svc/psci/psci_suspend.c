@@ -72,7 +72,7 @@ int psci_cpu_suspend_start(unsigned int entrypoint)
 	return PSCI_E_SUCCESS;
 }
 
-void s5p4418_tee_suspend(sec_entrypoint)
+void s5p4418_tee_suspend(unsigned int sec_entrypoint)
 {
 	psci_cpu_suspend_start(sec_entrypoint);
 }

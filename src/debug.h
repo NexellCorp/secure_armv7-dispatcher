@@ -21,7 +21,7 @@
 
 #include <nx_type.h>
 
-#define LOG_LEVEL			30
+#define LOG_LEVEL			20
 
 #define LOG_LEVEL_NONE			0
 #define LOG_LEVEL_ERROR			10
