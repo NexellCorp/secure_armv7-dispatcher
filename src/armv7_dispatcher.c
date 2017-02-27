@@ -105,7 +105,7 @@ void BootMain(CBOOL isresume, U32 non_secure_bl, U32 secureos_startaddr)
 	pReg_INTC[1]->SWINTCLEAR = 0xFFFFFFFF;	// all sw irq clear
 
 	if (secureos_startaddr) {
-		SYSMSG("Launch to secure 0x%08X\r\n", (U32)secureos_startaddr);
+		INFO("Launch to secure 0x%08X\r\n", (U32)secureos_startaddr);
 		if (!isresume)
 			secureos_bootarg();
 		while (!DebugIsUartTxDone())
@@ -114,7 +114,7 @@ void BootMain(CBOOL isresume, U32 non_secure_bl, U32 secureos_startaddr)
 	} else {
 		if (isresume)
 			non_secure_bl = pSBI->EntryPoint;
-		SYSMSG("Launch to non-secure 0x%08X\r\n", (U32)non_secure_bl);
+		INFO("Launch to non-secure 0x%08X\r\n", (U32)non_secure_bl);
 		while (!DebugIsUartTxDone())
 			;
 		non_secure_launch(isresume, non_secure_bl);

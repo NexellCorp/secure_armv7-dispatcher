@@ -78,7 +78,7 @@ int CRC_Check(void* buf, unsigned int size, unsigned int ref_crc)
 #endif
 	crc = __calc_crc((void*)buf, (int)size);
 	ret = (ref_crc == crc);
-	printf("CRC Check %s!! (%08X:%08X) \r\n",
+	NOTICE("CRC Check %s!! (%08X:%08X) \r\n",
 			ret ? "success":"failure", ref_crc, crc);
 
 	return ret;
