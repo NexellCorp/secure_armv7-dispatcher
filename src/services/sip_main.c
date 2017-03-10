@@ -42,27 +42,18 @@ extern void s5p4418_bclk_dfs(unsigned int pll_data);
 /*******************************************************************************
  * Registers to access in a secure mode write function.
  ******************************************************************************/
-static int secure_write(void* hwreg, int value)
+static inline int secure_write(void* hwreg, int value)
 {
-	set_secure_mode();
 	WriteIO32(hwreg, value);
-	set_nonsecure_mode();
-
 	return 0;
 }
 
 /*******************************************************************************
  * Registers to access in a secure mode read function.
  ******************************************************************************/
-static int secure_read(void* hwreg)
+static inline int secure_read(void* hwreg)
 {
-	int value = 0;
-
-	set_secure_mode();
-	value = ReadIO32(hwreg);
-	set_nonsecure_mode();
-
-	return value;
+	return ReadIO32(hwreg);
 }
 
 /*******************************************************************************
@@ -120,7 +111,7 @@ int sip_smc_handler(unsigned int smc_fid,
 	case S5PXX18_TIEOFF_REG_WRITE:
 		if (r1 & ADDRMASK_4K)
 			break;
-		if ((r1 == 0) || (r1 == 0x60) || (r1 >= 0x68))
+		if ((r1 == 0) || (r1 >= 0x68))
 			break;
 		r1 += PHY_BASEADDR_TIEOFF_MODULE;
 		return secure_write((void*)r1, (int)r2);
@@ -128,7 +119,7 @@ int sip_smc_handler(unsigned int smc_fid,
 	case S5PXX18_TIEOFF_REG_READ:
 		if (r1 & ADDRMASK_4K)
 			break;
-		if ((r1 == 0) || (r1 == 0x60) || (r1 >= 0x68))
+		if ((r1 == 0) || (r1 >= 0x68))
 			break;
 		r1 += PHY_BASEADDR_TIEOFF_MODULE;
 		return secure_read((void*)r1);
