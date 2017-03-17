@@ -1,50 +1,41 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * Copyright (C) 2016  Nexell Co., Ltd. All Rights Reserved.
+ * Nexell Co. Proprietary & Confidential
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Nexell informs that this code and information is provided "as is" base
+ * and without warranty of any kind, either expressed or implied, including
+ * but not limited to the implied warranties of merchantability and/or
+ * fitness for a particular puporse.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Module	:
+ * File		:
+ * Description	:
+ * Author	: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * History	: 2017.03.14 new release
  */
 #include <sysheader.h>
 
-extern void ResetCon(unsigned int devicenum, int en);
-extern void secure_launch(CBOOL isresume, U32 secureos_startaddr, U32 non_secure_bl);
-extern void non_secure_launch(CBOOL isresume, U32 non_secure_bl);
+extern void ResetCon(u32 devicenum, int en);
+extern void secure_launch(cbool isresume, u32 secureos_startaddr, u32 non_secure_bl);
+extern void non_secure_launch(cbool isresume, u32 non_secure_bl);
 
-#if !defined(SECURE_MODE)
-unsigned int g_subcpu_ep;
-#endif
+extern volatile union cpuonstatus ourcpus;
+u32 g_subcpu_ep;
 
-#define CPU_BRINGUP_CHECK   	(1)
 #define CPU_ALIVE_FLAG_ADDR	0xC0010238
 
-CBOOL subcpu_on_start(U32 cpuid)
+cbool subcpu_on_start(u32 cpuid)
 {
 	if ((cpuid > 3) || (cpuid == 0))
 		return CFALSE;
 
-#if (CPU_BRINGUP_CHECK == 1)
 	// High Vector;
-	SetIO32(&pReg_Tieoff->TIEOFFREG[0], ((1 << cpuid) << 18));
-#else
-	// Low Vector;
-	ClearIO32(&pReg_Tieoff->TIEOFFREG[0], ((1 << cpuid) << 18));
-#endif
+	SIO32(&pReg_Tieoff->TIEOFFREG[0], ((1 << cpuid) << 18));
 	/* Reset Assert */
 	ResetCon(cpuid, CTRUE);
 
 	/* CPUCLKOFF Set to 1 except CPU0 */
-	SetIO32(&pReg_Tieoff->TIEOFFREG[1], ((1 << cpuid) << (37 - 32)));
+	SIO32(&pReg_Tieoff->TIEOFFREG[1], ((1 << cpuid) << (37 - 32)));
 
 	// Reset Negate
 	ResetCon(cpuid, CFALSE);
@@ -53,13 +44,15 @@ CBOOL subcpu_on_start(U32 cpuid)
 	 * CPUCLKOFF Set to 0 except CPU0
 	 * supply clock to CPUCLK real startup cpu
 	 */
-	ClearIO32(&pReg_Tieoff->TIEOFFREG[1], ((1 << cpuid) << (37 - 32)));
+	CIO32(&pReg_Tieoff->TIEOFFREG[1], ((1 << cpuid) << (37 - 32)));
 
 	return CTRUE;
 }
 
-void SubCPUBoot(void)
+void SubCPUBoot(u32 cpuid)
 {
+	ourcpus.cpu[cpuid] = 1;
+
 	if (g_subcpu_ep) {
 		if (g_subcpu_ep & 0x1) {	// check from non-secure call mark
 			g_subcpu_ep &= ~1;
@@ -72,38 +65,3 @@ void SubCPUBoot(void)
 	while (1);
 }
 
-void subcpu_bringup(void)
-{
-#if (CPU_BRINGUP_CHECK == 1)
-	volatile unsigned int *aliveflag
-		= (unsigned int *)CPU_ALIVE_FLAG_ADDR;
-	int cpu_number, retry = 0;
-
-	for (cpu_number = 1; cpu_number < 4;) {
-		register volatile unsigned int delay;
-		*aliveflag = 0;
-		delay = 0x10000;
-		subcpu_on_start(cpu_number);
-		while ((*aliveflag == 0) && (--delay));
-		if (delay == 0) {
-			if (retry > 3) {
-				WARN("maybe cpu %d is dead. -_-;\r\n",
-						cpu_number);
-				retry = 0;
-				cpu_number++;
-			} else {
-				WARN("cpu %d is not bringup, retry\r\n",
-						cpu_number);
-				retry++;
-			}
-		} else {
-			retry = 0;
-			cpu_number++;
-		}
-	}
-#else
-	subcpu_on_start(1);
-	subcpu_on_start(2);
-	subcpu_on_start(3);
-#endif
-}

@@ -1,19 +1,31 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * Copyright (c) 2013-2015, ARM Limited and Contributors. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * Neither the name of ARM nor the names of its contributors may be used
+ * to endorse or promote products derived from this software without specific
+ * prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sysheader.h>
 #include <smcc_helpers.h>
@@ -21,11 +33,11 @@
 #include <gic.h>
 
 /* External function */
-extern unsigned int std_svc_smc_handler(unsigned int smc_fid,
-	unsigned int r1, unsigned int r2, unsigned int r3);
+extern u32 std_svc_smc_handler(u32 smc_fid,
+	u32 r1, u32 r2, u32 r3);
 
-extern unsigned int sip_smc_handler(unsigned int smc_fid,
-	unsigned int r1, unsigned int r2, unsigned int r3);
+extern u32 sip_smc_handler(u32 smc_fid,
+	u32 r1, u32 r2, u32 r3);
 
 extern int s5p4418_bclk_dfs_handler(void);
 extern int psci_cpu_off_handler(void);
@@ -33,8 +45,8 @@ extern int psci_cpu_off_handler(void);
 #define IS_SMC_TYPE(_fid)	((_fid >> 24) & 0xF)
 
 /* External Variable */
-volatile unsigned int g_smc_id    = 0;
-volatile unsigned int g_fiq_flag  = 0;
+volatile u32 g_smc_id    = 0;
+volatile u32 g_fiq_flag  = 0;
 volatile int g_cpu_kill_num = 0;
 
 /*******************************************************************************
@@ -63,13 +75,12 @@ void smc_monitor_fiq_handler(void)
 	char* cpu_base = (char*)gicc_get_baseaddr();
 	int eoir;
 
-	set_secure_mode();
-
 	eoir = gicc_get_iar(cpu_base);
-	if (g_smc_id == (unsigned int)0x84000002)
+
+	if (g_smc_id == (u32)0x84000002)
 		psci_cpu_off_handler();
 
-	else if (g_smc_id == (unsigned int)0x82000009)
+	else if (g_smc_id == (u32)0x82000009)
 		s5p4418_bclk_dfs_handler();
 	else {
 		WARN("unknown parameter smc_id : 0x%08X intid:%x\r\n",
@@ -77,16 +88,14 @@ void smc_monitor_fiq_handler(void)
 	}
 
 	gicc_set_eoir(cpu_base, eoir);
-	set_nonsecure_mode();
 }
 
 /*******************************************************************************
  * Top level handler for servicing BL1 SMCs.
  ******************************************************************************/
-unsigned int bl1_smc_handler(unsigned int smc_fid,
-	unsigned int r1, unsigned int r2, unsigned int r3)
+u32 bl1_smc_handler(u32 smc_fid, u32 r1, u32 r2, u32 r3)
 {
-	unsigned char smc_type = IS_SMC_TYPE(smc_fid);
+	u8 smc_type = IS_SMC_TYPE(smc_fid);
 
 	DBGOUT("R0: %X, R1: %X, R2: %X, R3: %X \r\n", smc_fid, r1, r2, r3);
 

@@ -1,19 +1,17 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * Copyright (C) 2016  Nexell Co., Ltd. All Rights Reserved.
+ * Nexell Co. Proprietary & Confidential
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Nexell informs that this code and information is provided "as is" base
+ * and without warranty of any kind, either expressed or implied, including
+ * but not limited to the implied warranties of merchantability and/or
+ * fitness for a particular puporse.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Module	:
+ * File		:
+ * Description	:
+ * Author	: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * History	: 2017.03.14 new release
  */
 #include <sysheader.h>
 
@@ -21,48 +19,48 @@
 
 #define DPCCTRL0		0x118
 
-static void* dpc_get_baseaddr(unsigned int module)
+static inline void* dpc_get_baseaddr(u32 module)
 {
 	return (void*)(DPC_BASEADDR + (module * 0x4000));
 }
 
 
-void dpc_set_enable_all(unsigned int module, unsigned int enb)
+void dpc_set_enable_all(u32 module, u32 enb)
 {
-	volatile void *base = dpc_get_baseaddr(module);
-	unsigned int value;
+	void *base = dpc_get_baseaddr(module);
+	u32 value;
 
-	value = mmio_read_32(base + DPCCTRL0);
+	value = RIO32(base + DPCCTRL0);
 
 	value &= ~(1 << 15);
-	value |= (U32)enb << 15;
+	value |= (u32)enb << 15;
 
-	mmio_write_32((base + DPCCTRL0), value);
+	WIO32((base + DPCCTRL0), value);
 }
 
-int dpc_get_pending_all(unsigned int module)
+int dpc_get_pending_all(u32 module)
 {
-	volatile void *base = dpc_get_baseaddr(module);
-	return (mmio_read_32(base + DPCCTRL0) >> 10);
+	void *base = dpc_get_baseaddr(module);
+	return (RIO32(base + DPCCTRL0) >> 10);
 }
 
-void dpc_clear_pending_all(unsigned int module)
+void dpc_clear_pending_all(u32 module)
 {
-	volatile void* base = (void*)dpc_get_baseaddr(module);
-	unsigned int value;
+	void* base = (void*)dpc_get_baseaddr(module);
+	u32 value;
 
-	value = mmio_read_32(base + DPCCTRL0);
+	value = RIO32(base + DPCCTRL0);
 	value |= (1 << 10);
 
-	mmio_write_32((base + DPCCTRL0), value);
+	WIO32((base + DPCCTRL0), value);
 }
 
-int  dpc_enabled(unsigned int module)
+int  dpc_enabled(u32 module)
 {
-	volatile void* base = (void*)dpc_get_baseaddr(module);
-	unsigned int value;
+	void* base = (void*)dpc_get_baseaddr(module);
+	u32 value;
 
-	value = mmio_read_32(base + DPCCTRL0);
+	value = RIO32(base + DPCCTRL0);
 
 	return value & (1 << 15);
 }

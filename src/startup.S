@@ -1,22 +1,21 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: Sangjong, Han <hans@nexell.co.kr>
+ * Copyright (C) 2016  Nexell Co., Ltd. All Rights Reserved.
+ * Nexell Co. Proprietary & Confidential
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Nexell informs that this code and information is provided "as is" base
+ * and without warranty of any kind, either expressed or implied, including
+ * but not limited to the implied warranties of merchantability and/or
+ * fitness for a particular puporse.
+ * This code is not allowed to redistribute without permission or
+ * open to the public.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Module	:
+ * File		:
+ * Description	:
+ * Author	: Hans
+ * History	: 2017.03.14 new release
  */
-#include "nx_pyrope.h"
-#include "cfgBootDefine.h"
+#include <nx_pyrope.h>
 
         .align
 /* Start and e.nd of BSS */
@@ -59,8 +58,8 @@ reset_handler:
 	mcr	p15, 0, r0, c12, c0, 0	// set svc vector(VBAR)
 
 
-	bl      Invalidate_entire_branch_predictor
-	bl      InvalidateDataCache
+	bl	Invalidate_entire_branch_predictor
+	bl	InvalidateDataCache
 
 	/* Set the initialization for PSCI (Monitor Mode) */
 	bl	monitor_mode_init
@@ -74,24 +73,24 @@ reset_handler:
 //	orreq	r0, r0, #(1 << 3)		// Zero
 	mcreq	p15, 0, r0, c1, c0, 1		// Write Aux Control Register
 
-	mrc     p15, 0, r0, c1, c0, 0		// Read CP15 System Control register
-	orr     r0, r0, #(BIT1_I|BIT1_Z)	// set I:12, Z:11 bit to enable I-Cache, Branch Prediction
-	mcr     p15, 0, r0, c1, c0, 0
+	mrc	p15, 0, r0, c1, c0, 0		// Read CP15 System Control register
+	orr	r0, r0, #(BIT1_I|BIT1_Z)	// set I:12, Z:11 bit to enable I-Cache, Branch Prediction
+	mcr	p15, 0, r0, c1, c0, 0
 	/* GIC secure part enable, route to non-secure */
-	mrc     p15, 4, r0, c15, c0, 0          // Read CBAR
+	mrc	p15, 4, r0, c15, c0, 0		// Read CBAR
 	orr	r2, r0, #0x1000
 
-	mov     r1, #0xFFFF00FF                 // gicd - interrupt secure-route
-	str     r1, [r2, #0x080]                // gicd - interrupat Group Register
+	mov	r1, #0xFFFF00FF			// gicd - interrupt secure-route
+	str	r1, [r2, #0x080]		// gicd - interrupat Group Register
 
-	mov     r1, #(0x3 << 0)			// gicd Enable NS[1], Enable S[0]
-	str     r1, [r2, #0x000]                // gicd secure enable
+	mov	r1, #(0x3 << 0)			// gicd Enable NS[1], Enable S[0]
+	str	r1, [r2, #0x000]		// gicd secure enable
 
-	mov     r1, #0xFFFFFFFF
-	str     r1, [r0, #0x104]                // gicc - interrupt priority to best
+	mov	r1, #0xFFFFFFFF
+	str	r1, [r0, #0x104]		// gicc - interrupt priority to best
 
-	mov     r1, #(0xB << 0)                 // FIQ_En[3], EnableGrp1[1], EnableGrp0[0]
-	str     r1, [r0, #0x100]                // gicc enable
+	mov	r1, #(0xB << 0)			// FIQ_En[3], EnableGrp1[1], EnableGrp0[0]
+	str	r1, [r0, #0x100]		// gicc enable
 
 	/*
 	 * Processor is in Secure Mode, when the FIQ occurs
@@ -116,34 +115,35 @@ reset_handler:
 	mov	r3, #0x40000000
 	vmsr	fpexc, r3			// enable vpu
 
-	mrc     p15, 0, r12, c0, c0, 5         	// Get our cpu id
-	ands    r12, r12, #0xF			// Save CPU id
+	mrc	p15, 0, r12, c0, c0, 5		// Get our cpu id
+	ands	r12, r12, #0xF			// Save CPU id
+	movne	r0, r12
 	bne	SubCPUBoot
 
-	mrc     p15, 4, r0, c15, c0, 0          // Read CBAR
-	orr     r2, r0, #0x1000                 // base of gicd
+	mrc	p15, 4, r0, c15, c0, 0		// Read CBAR
+	orr	r2, r0, #0x1000			// base of gicd
 
-	mov     r1, #0xFFFFFFFF
-	str     r1, [r2, #0x084]                // gicd - interrupt route to non-secure
-	str     r1, [r2, #0x088]                // gicd - interrupt group
-	str     r1, [r2, #0x08C]                // gicd - interrupt group
+	mov	r1, #0xFFFFFFFF
+	str	r1, [r2, #0x084]		// gicd - interrupt route to non-secure
+	str	r1, [r2, #0x088]		// gicd - interrupt group
+	str	r1, [r2, #0x08C]		// gicd - interrupt group
 
 	/* Set to zero, Clear SRAM */
-        ldr     r1, =__bss_start__		// this is auto-relocated!
-        ldr     r2, =__bss_end__		// this is auto-relocated!
+        ldr	r1, =__bss_start__		// this is auto-relocated!
+        ldr	r2, =__bss_end__		// this is auto-relocated!
 
-        mov     r3, #0x00000000			// prepare zero to clear BSS
+        mov	r3, #0x00000000			// prepare zero to clear BSS
 
 clbss_l:
-        cmp     r1, r2				// while not at end of BSS
-        strlo   r3, [r1]			// clear 32-bit BSS word
-        addlo   r1, r1, #4			// move to next
-        blo     clbss_l
+	cmp	r1, r2				// while not at end of BSS
+	strlo	r3, [r1]			// clear 32-bit BSS word
+	addlo	r1, r1, #4			// move to next
+	blo	clbss_l
 
 main:
-	mrc	p15, 0, r0, c13, c0, 2          // restore boot status from tpidr
-	mrc	p15, 0, r1, c13, c0, 3          // restore non-secure os ptr from tpidr
-	mrc	p15, 0, r2, c13, c0, 4          // restore secure os ptr from tpidr
+	mrc	p15, 0, r0, c13, c0, 2		// restore boot status from tpidr
+	mrc	p15, 0, r1, c13, c0, 3		// restore non-secure os ptr from tpidr
+	mrc	p15, 0, r2, c13, c0, 4		// restore secure os ptr from tpidr
 // void BootMain(isresume, non_secure, secure);
 	bl	BootMain			// no need but system init
 	b	.
@@ -156,7 +156,7 @@ main:
 //secure_launch(isresume, secureos_startaddr, non_secure_bl, bootarg_addr);
 secure_launch:
 	mov	r11, r1
-	msr CPSR_c,  #(Mode_SVC|I_Bit) /* switch to SVC mode */
+	msr CPSR_c,  #(Mode_SVC|I_Bit)	/* switch to SVC mode */
 
 	mov	lr, r2		// non_secure bl launch address
 	mov	r1, r3		// g_bootarg_tee
@@ -180,26 +180,26 @@ non_secure_launch:
 	/* Change to Secure -> Non-Secure */
 	bl	set_nonsecure_mode
 
-        bl      Invalidate_entire_branch_predictor
-        bl      InvalidateDataCache
+	bl	Invalidate_entire_branch_predictor
+	bl	InvalidateDataCache
 	mov	lr, r4
 
-	mov     r1,  #0
-	mov     r2,  #0
-	mov     r3,  #0
-	mov     r4,  #0
-	mov     r5,  #0
-	mov     r6,  #0
-	mov     r7,  #0
-	mov     r8,  #0
-	mov     r9,  #0
-	mov     r10, #0
-	mov     r11, #0
-	mov     r12, #0
+	mov	r1,  #0
+	mov	r2,  #0
+	mov	r3,  #0
+	mov	r4,  #0
+	mov	r5,  #0
+	mov	r6,  #0
+	mov	r7,  #0
+	mov	r8,  #0
+	mov	r9,  #0
+	mov	r10, #0
+	mov	r11, #0
+	mov	r12, #0
 
 	/* switch to supervisor mode */
 	mov	r0, #(Mode_SVC | I_Bit)
-	msr     SPSR_cxsf, r0
+	msr	SPSR_cxsf, r0
 	mov	r0, #0
 	movs	pc, lr
 

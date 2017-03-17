@@ -1,50 +1,47 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * Copyright (C) 2016  Nexell Co., Ltd. All Rights Reserved.
+ * Nexell Co. Proprietary & Confidential
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Nexell informs that this code and information is provided "as is" base
+ * and without warranty of any kind, either expressed or implied, including
+ * but not limited to the implied warranties of merchantability and/or
+ * fitness for a particular puporse.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Module	:
+ * File		:
+ * Description	:
+ * Author	: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * History	: 2017.03.14 new release
  */
 #include <sysheader.h>
 #include <gic.h>
 #include <dpc.h>
-#include <nx_reg_base.h>
 
 #define SGI_IRQ_8		8
 
-extern volatile unsigned int g_smc_id;
-extern volatile unsigned int g_fiq_flag;
+/* Direct Command */
+#define DIRCMD_TYPE_SHIFT	(24)
+#define DIRCMD_CHIP_SHIFT	(20)
+#define DIRCMD_PALL		(0x1)
+#define DIRCMD_CHIP_0		(0x0)
+extern volatile u32 g_smc_id;
+extern volatile u32 g_fiq_flag;
+extern volatile union cpuonstatus ourcpus;
+
+static volatile union cpuonstatus devdfs;
 
 /* External function */
 extern int  armv7_get_cpuid(void);
-extern void set_nonsecure_mode(void);
-extern void set_secure_mode(void);
-
-extern void chche_delay_ms(int ms);
-
 extern void s5p4418_cpuidle(int cpu_id, int int_id);
-extern void s5p4418_change_pll(volatile int *base, unsigned int pll_data);
-extern void smc_set_monitor_fiq(int enable);
 
 void s5p4418_bclk_dfs_handler(void)
 {
 	int cpu_id = armv7_get_cpuid();
 
-	/* Sequenceal Unlock */
-	do {
-		/* waitng for event */
-		 __asm__ __volatile__ ("wfe");
-	} while (g_fiq_flag & (1 << cpu_id));
+	devdfs.cpu[cpu_id] = 1;
+
+	while (devdfs.cpu[cpu_id])
+		;
 }
 
 /*******************************************************************************
@@ -53,8 +50,7 @@ void s5p4418_bclk_dfs_handler(void)
 static void cpu_up_force(void)
 {
 	g_fiq_flag = 0;
-	/* wake up cpux (send event) */
-	__asm__ __volatile__ ("sev");
+	devdfs.cpus = 0;
 }
 
 /*******************************************************************************
@@ -66,35 +62,69 @@ static void cpu_down_force(void)
 	int cpu_id = armv7_get_cpuid();
 
 	g_smc_id = 0x82000009;
+	devdfs.cpu[cpu_id] = 1;
 
 	/* Using the SGI(GIC), and calls to the idle of the CORE FIQ. */
 	g_fiq_flag = (0xF & ~(1 << cpu_id));
 	s5p4418_cpuidle(g_fiq_flag, SGI_IRQ_8);
-	cache_delay_ms(0xFFFF);
+
+	while (devdfs.cpus != ourcpus.cpus)
+		;
 }
 
-static void send_directcmd(unsigned int cmd, unsigned char chip,
-				unsigned int mrx, unsigned short value)
+static void send_directcmd(u32 cmd, u8 chip, u32 mrx, u16 value)
 {
-	volatile char* drex_reg = (char*)PHY_BASEADDR_DREX_MODULE_CH0_APB;
-	mmio_write_32((drex_reg + 0x10), ((cmd << DIRCMD_TYPE_SHIFT)
+	void* drex_reg = (void*)PHY_BASEADDR_DREX_MODULE_CH0_APB;
+	WIO32((drex_reg + 0x10), ((cmd << DIRCMD_TYPE_SHIFT)
 		| (chip << DIRCMD_CHIP_SHIFT) | (mrx << 16) | value));
 }
 
 static void sram_set_auto_refresh(int enb)
 {
-	char* drex_reg = (char*)PHY_BASEADDR_DREX_MODULE_CH0_APB;
+	void* drex_reg = (void*)PHY_BASEADDR_DREX_MODULE_CH0_APB;
 	int value = 0;
 
-	value = mmio_read_32(drex_reg + 0x00);
+	value = RIO32(drex_reg + 0x00);
 	value &= ~(0x1 << 5);
 
 	if (enb)
 		value |= (0x1 << 5);
 
-	mmio_write_32((drex_reg + 0x00), value);
+	WIO32((drex_reg + 0x00), value);
 }
 
+void s5p4418_change_pll(u32 pll_data)
+{
+	u32 pll_num	= (pll_data & 0x00000003);
+	u32 s		= (pll_data & 0x000000fc) >> 2;
+	u32 m		= (pll_data & 0x00ffff00) >> 8;
+	u32 p		= (pll_data & 0xff000000) >> 24;
+
+	CIO32(&pReg_ClkPwr->PLLSETREG[pll_num], 1 << 28);
+	WIO32(&pReg_ClkPwr->CLKMODEREG0, 1 << pll_num);
+	while (RIO32(&pReg_ClkPwr->CLKMODEREG0) & (1 << 31))
+		;
+
+	WIO32(&pReg_ClkPwr->PLLSETREG[pll_num],
+			(1UL << 29) |
+			(0UL << 28) |
+			(s   << 0)  |
+			(m   << 8)  |
+			(p   << 18));
+	WIO32(&pReg_ClkPwr->CLKMODEREG0, 1 << pll_num);
+	while (RIO32(&pReg_ClkPwr->CLKMODEREG0) & (1 << 31))
+		;
+
+	CIO32(&pReg_ClkPwr->PLLSETREG[pll_num], 1UL << 29);
+	WIO32(&pReg_ClkPwr->CLKMODEREG0, 1 << pll_num);
+	while (RIO32(&pReg_ClkPwr->CLKMODEREG0) & (1 << 31))
+		;
+
+	SIO32(&pReg_ClkPwr->PLLSETREG[pll_num], 1 << 28);
+	WIO32(&pReg_ClkPwr->CLKMODEREG0, 1 << pll_num);
+	while (RIO32(&pReg_ClkPwr->CLKMODEREG0) & (1 << 31))
+		;
+}
 /*******************************************************************************
  * Must be S5P4418
  * PLL Change sequence in S5P4418 (Kernel)
@@ -108,9 +138,14 @@ static void sram_set_auto_refresh(int enb)
  * Step 05. DRAM Command - Precharge All
  * Step 06. Change to cpu wakeup state
  ******************************************************************************/
-void s5p4418_bclk_freqchange(unsigned int pll_data)
+void s5p4418_bclk_freqchange(u32 pll_data)
 {
 	int dpc_index = 0;
+
+	/* Step 01. DRAM Command - Precharge All */
+	sram_set_auto_refresh(0);
+
+	send_directcmd(DIRCMD_PALL, DIRCMD_CHIP_0, 0, 0);
 
 	/* Step 02. Waiting for DPC Blank */
 	if (dpc_enabled(dpc_index)) {
@@ -119,25 +154,22 @@ void s5p4418_bclk_freqchange(unsigned int pll_data)
 			;
 	}
 
-	/* Step 01. DRAM Command - Precharge All */
-	sram_set_auto_refresh(0);
-	send_directcmd(DIRCMD_PALL, DIRCMD_CHIP_0, 0, 0);
-
 	/* Step 03. change to PLL(P,M,S) */
-	s5p4418_change_pll((volatile int*)PHY_BASEADDR_CLKPWR_MODULE, pll_data);
-
-	/* Step 05. DRAM Command - Precharge All */
-	sram_set_auto_refresh(1);
-	send_directcmd(DIRCMD_PALL, DIRCMD_CHIP_0, 0, 0);
+	s5p4418_change_pll(pll_data);
 
 	/* Step 04. Clear & Waiting for DPC Blank */
 	if (dpc_enabled(dpc_index)) {
 		dpc_clear_pending_all(dpc_index);
 		dpc_set_enable_all(dpc_index, 1);
 	}
+
+	/* Step 05. DRAM Command - Precharge All */
+	send_directcmd(DIRCMD_PALL, DIRCMD_CHIP_0, 0, 0);
+
+	sram_set_auto_refresh(1);
 }
 
-void s5p4418_bclk_dfs(unsigned int pll_data)
+void s5p4418_bclk_dfs(u32 pll_data)
 {
 	/* Step 00. change to cpu idle state */
 	cpu_down_force();
@@ -148,35 +180,32 @@ void s5p4418_bclk_dfs(unsigned int pll_data)
 	cpu_up_force();
 }
 
-volatile unsigned int tee_wait_bclk_dfs_flag[4] = {0};
+volatile u32 tee_wait_bclk_dfs_flag[4] = {0};
 void s5p4418_tee_bclkwait(void)
 {
 	int cpu_id = armv7_get_cpuid();
 
 	tee_wait_bclk_dfs_flag[cpu_id] = 1;
 	/* Wait until PLL freq change is done */
-	while (tee_wait_bclk_dfs_flag[cpu_id]);
+	while (tee_wait_bclk_dfs_flag[cpu_id])
+		;
 }
 
-void s5p4418_tee_bclk(unsigned int pll_data, unsigned int wait_flag)
+void s5p4418_tee_bclk(u32 pll_data, u32 wait_flag)
 {
-    unsigned int read_flag = 0;
-    unsigned int i = 0;
-    /* Waiting for all other cores to be in s5p4418_tee_bclkwait() */
-    do
-    {
-        read_flag = 0;
-        for (i = 0; i < 4; i++)
-        {
-            read_flag |= tee_wait_bclk_dfs_flag[i] << i;
-        }
-    } while (wait_flag != read_flag);
+	u32 read_flag = 0;
+	u32 i = 0;
+
+	/* Waiting for all other cores to be in s5p4418_tee_bclkwait() */
+	do {
+		read_flag = 0;
+		for (i = 0; i < 4; i++)
+			read_flag |= tee_wait_bclk_dfs_flag[i] << i;
+	} while (wait_flag != read_flag);
 
 	s5p4418_bclk_freqchange(pll_data);
 
-    /* Release the other cores */
-    for (i = 0; i < 4; i++)
-    {
-        tee_wait_bclk_dfs_flag[i] = 0;
-    }
+	/* Release the other cores */
+	for (i = 0; i < 4; i++)
+		tee_wait_bclk_dfs_flag[i] = 0;
 }

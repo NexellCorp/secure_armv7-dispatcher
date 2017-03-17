@@ -1,32 +1,34 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * Copyright (C) 2016  Nexell Co., Ltd. All Rights Reserved.
+ * Nexell Co. Proprietary & Confidential
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Nexell informs that this code and information is provided "as is" base
+ * and without warranty of any kind, either expressed or implied, including
+ * but not limited to the implied warranties of merchantability and/or
+ * fitness for a particular puporse.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Module	:
+ * File		:
+ * Description	:
+ * Author	: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * History	: 2017.03.14 new release
  */
-#include "sysheader.h"
+#include <sysheader.h>
 
 void tieoff_set_secure(void)
 {
-	unsigned int value;
+	u32 value;
+
+	/* set dram to support secure address */
+	SIO32(&pReg_Tieoff->TIEOFFREG[24],
+			0xF << 28 | 0xF << 24 | 1 << 17 | 1 << 16);
 
 	value = 0xFFFFFFFF;
-	value &= ~(1 << 29 | 1 << 25);	// tieoff, crypto
-	pReg_Tieoff->TIEOFFREG[26] = value;
+	value &= ~(1 << 29 | 1 << 25);	/* tieoff, crypto */
+	WIO32(&pReg_Tieoff->TIEOFFREG[26], value);
 
 	value = 0xFFFFFFFF;
-	value &= ~(1 << 3);	// sram
-	pReg_Tieoff->TIEOFFREG[30] = value;
+	value &= ~(1 << 3);	/* sram */
+	WIO32(&pReg_Tieoff->TIEOFFREG[30], value);
 }
 

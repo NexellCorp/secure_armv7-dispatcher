@@ -1,40 +1,22 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: Sangjong, Han <hans@nexell.co.kr>
+ * Copyright (C) 2016  Nexell Co., Ltd. All Rights Reserved.
+ * Nexell Co. Proprietary & Confidential
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Nexell informs that this code and information is provided "as is" base
+ * and without warranty of any kind, either expressed or implied, including
+ * but not limited to the implied warranties of merchantability and/or
+ * fitness for a particular puporse.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Module	:
+ * File		:
+ * Description	:
+ * Author	: Hans
+ * History	: 2017.03.14 new release
  */
-#include "sysheader.h"
 #include <nx_pyrope.h>
 #include <nx_type.h>
 
-U32 get_fcs(U32 fcs, U8 data)
-{
-	int i;
-
-	fcs ^= (U32)data;
-	for (i = 0; i < 8; i++) {
-		if (fcs & 0x01)
-			fcs = (fcs >> 1) ^ POLY;
-		else
-			fcs >>= 1;
-	}
-
-	return fcs;
-}
-
-U32 iget_fcs(U32 fcs, U32 data)
+u32 iget_fcs(u32 fcs, u32 data)
 {
 	int i;
 
@@ -49,15 +31,12 @@ U32 iget_fcs(U32 fcs, U32 data)
 	return fcs;
 }
 
-/* CRC Calcurate Function
- * CHKSTRIDE is Data Stride.
- */
 #define CHKSTRIDE 1
-U32 __calc_crc(void *addr, int len)
+u32 __calc_crc(void *addr, int len)
 {
-	U32 *c = (U32 *)addr;
-	U32 crc = 0, chkcnt = ((len + 3) / 4);
-	U32 i;
+	u32 *c = (u32 *)addr;
+	u32 crc = 0, chkcnt = ((len + 3) / 4);
+	u32 i;
 
 	for (i = 0; chkcnt > i; i += CHKSTRIDE, c += CHKSTRIDE)
 		crc = iget_fcs(crc, *c);
@@ -65,21 +44,3 @@ U32 __calc_crc(void *addr, int len)
 	return crc;
 }
 
-/*
- * Add CRC Check Function.
- * When there is a problem, except for boot device(SD/eMMC/USB/etc), you can check the error.
- */
-int CRC_Check(void* buf, unsigned int size, unsigned int ref_crc)
-{
-	unsigned int crc;
-	int ret;
-#if 0	/* Debug Message */
-	printf("CRC - Addr : %X, Size : %X \r\n", buf, size);
-#endif
-	crc = __calc_crc((void*)buf, (int)size);
-	ret = (ref_crc == crc);
-	NOTICE("CRC Check %s!! (%08X:%08X) \r\n",
-			ret ? "success":"failure", ref_crc, crc);
-
-	return ret;
-}

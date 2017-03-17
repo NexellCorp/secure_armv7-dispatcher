@@ -1,19 +1,31 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * Copyright (c) 2013-2015, ARM Limited and Contributors. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * Neither the name of ARM nor the names of its contributors may be used
+ * to endorse or promote products derived from this software without specific
+ * prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sysheader.h>
 #include <nx_prototype.h>
@@ -22,58 +34,47 @@
 #include <psci.h>
 
 /* External Function */
-extern int  psci_validate_mpidr(unsigned int mpidr);
+extern int  psci_validate_mpidr(u32 mpidr);
 extern void psci_power_down_wfi(void);
 
-extern int  psci_cpu_on_start(unsigned int target_cpu, unsigned int entrypoint);
-extern int  psci_do_cpu_off(unsigned int cpu_id);
-
+extern int  psci_cpu_on_start(u32 target_cpu, u32 entrypoint);
+extern int  psci_do_cpu_off(u32 cpu_id);
 extern void psci_system_off(void);
 extern void psci_system_reset(void);
-extern int  psci_cpu_suspend_start(unsigned int entrypoint);
+extern int  psci_cpu_suspend_start(u32 entrypoint);
 
 /* External Variable */
 extern volatile int g_smc_id;
 extern volatile int g_fiq_flag;
 extern volatile int g_cpu_kill_num;
+extern volatile union cpuonstatus ourcpus;
 
 
 /* Macro to help build the psci capabilities bitfield */
 #define define_psci_cap(x)		(1 << (x & 0x1f))
 
-unsigned int psci_caps = define_psci_cap(PSCI_CPU_OFF) |
-	define_psci_cap(PSCI_CPU_ON_AARCH32) |
-	define_psci_cap(PSCI_SYSTEM_OFF) |
-	define_psci_cap(PSCI_SYSTEM_SUSPEND_AARCH32);
+u32 psci_caps = define_psci_cap(PSCI_CPU_OFF) |
+		define_psci_cap(PSCI_CPU_ON_AARCH32) |
+		define_psci_cap(PSCI_SYSTEM_OFF) |
+		define_psci_cap(PSCI_SYSTEM_SUSPEND_AARCH32);
 
 /*******************************************************************************
  * PSCI frontend api for servicing SMCs. Described in the PSCI spec.
  ******************************************************************************/
 void psci_set_sgi_caller(int cpu_id)
 {
-#if 0	// Considering that the original sequence.
-	int id;
-
-	for (id = 0; id < 4; id++) {
-		if (cpu_id != id) {
-			g_fiq_flag |= (1 << id);
-			s5p4418_cpuidle(id, (id + 8));
-		}
-	}
-#else	// Sequences that are usually used.
-	// CPU Number : 0x0 Interrupt Number : 8
+	u32 target_cpu = 0, int_num = 8;
 	cpu_id = cpu_id;
-	s5p4418_cpuidle((1 << 0), 8);
-#endif
+	s5p4418_cpuidle((1 << target_cpu), int_num);
 }
 
-unsigned int psci_version(void)
+u32 psci_version(void)
 {
 	return PSCI_MAJOR_VER | PSCI_MINOR_VER;
 }
 
-int psci_cpu_on(unsigned int target_cpu,
-		unsigned int entrypoint, unsigned int context_id)
+int psci_cpu_on(u32 target_cpu,
+		u32 entrypoint, u32 context_id)
 {
 	int rc;
 
@@ -98,6 +99,7 @@ int psci_cpu_off(void)
 	/* Check the CPUx to Kill*/
 	g_smc_id = PSCI_CPU_OFF;
 	g_cpu_kill_num = cpu_id;
+	ourcpus.cpu[cpu_id] = 0;
 
 	/* Check the SGI Call CPUx */
 	psci_set_sgi_caller(cpu_id);
@@ -108,7 +110,7 @@ int psci_cpu_off(void)
 	return rc;
 }
 
-int psci_system_suspend(unsigned int entrypoint, unsigned int context_id)
+int psci_system_suspend(u32 entrypoint, u32 context_id)
 {
 	int rc = 0;
 
@@ -119,11 +121,10 @@ int psci_system_suspend(unsigned int entrypoint, unsigned int context_id)
 	return rc;
 }
 
-int psci_affinity_info(unsigned int target_affinity,
-		       unsigned int lowest_affinity_level)
+int psci_affinity_info(u32 target_affinity, u32 lowest_affinity_level)
 {
-	unsigned int cpu_id = (target_affinity & 0xF);
-	unsigned int status = 0;
+	u32 cpu_id = (target_affinity & 0xF);
+	u32 status = 0;
 
 	target_affinity = target_affinity;
 	lowest_affinity_level = lowest_affinity_level;
@@ -133,9 +134,9 @@ int psci_affinity_info(unsigned int target_affinity,
 	return status;
 }
 
-int psci_features(unsigned int psci_fid)
+int psci_features(u32 psci_fid)
 {
-	unsigned int local_caps = psci_caps;
+	u32 local_caps = psci_caps;
 
 	/* TODO: sanity check of psci_fid */
 
@@ -147,9 +148,7 @@ int psci_features(unsigned int psci_fid)
 	return PSCI_E_SUCCESS;
 }
 
-int psci_smc_handler(
-	unsigned int smc_fid,
-	unsigned int x1, unsigned int x2, unsigned int x3)
+int psci_smc_handler(u32 smc_fid, u32 x1, u32 x2, u32 x3)
 {
 
 	DBGOUT(" R0: %X, R1: %X, R2: %X, R3: %X \r\n",

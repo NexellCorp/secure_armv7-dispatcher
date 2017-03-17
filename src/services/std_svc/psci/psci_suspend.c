@@ -1,113 +1,62 @@
 /*
- * Copyright (C) 2016  Nexell Co., Ltd.
- * Author: DeokJin, Lee <truevirtue@nexell.co.kr>
+ * Copyright (c) 2013-2015, ARM Limited and Contributors. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * Neither the name of ARM nor the names of its contributors may be used
+ * to endorse or promote products derived from this software without specific
+ * prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sysheader.h>
 #include <plat_pm.h>
 #include <psci.h>
 
-/* External function */
-extern unsigned int __calc_crc(void *addr, int len);
-
-/* Macro for Suspend/Resume */
-#define PSCI_SUSPEND		0
-#define PSCI_RESUME		1
-
-/*************************************************************
- * Before entering suspend and Mark the location and promise Kernel.
- * Reference CRC, Jump Address, Memory Address(CRC), Size(CRC)
- *************************************************************/
-static void suspend_mark(unsigned int state, unsigned int entrypoint,
-		unsigned int crc, unsigned int mem, unsigned int size)
-{
-#if 0	// Not determined mark parmeter
-	unsigned int crc;
-	unsigned int mem = 0x40000000, size = (512*1024*1024);
-#endif
-	mmio_write_32(&pReg_Alive->ALIVESCRATCHRSTREG, 0xFFFFFFFF);
-	mmio_write_32(&pReg_Alive->ALIVESCRATCHRST1, 0xFFFFFFFF);
-	mmio_write_32(&pReg_Alive->ALIVESCRATCHRST2, 0xFFFFFFFF);
-	mmio_write_32(&pReg_Alive->ALIVESCRATCHRST3, 0xFFFFFFFF);
-	mmio_write_32(&pReg_Alive->ALIVESCRATCHRST4, 0xFFFFFFFF);
-
-	if (state == PSCI_SUSPEND) {
-		crc = __calc_crc((void *)mem, size);
-		mmio_write_32(&pReg_Alive->ALIVESCRATCHSETREG, SUSPEND_SIGNATURE);
-		mmio_write_32(&pReg_Alive->ALIVESCRATCHSET1, entrypoint);
-		mmio_write_32(&pReg_Alive->ALIVESCRATCHSET2, crc);
-		mmio_write_32(&pReg_Alive->ALIVESCRATCHSET3, mem);
-		mmio_write_32(&pReg_Alive->ALIVESCRATCHSET4, size);
-	}
-}
-
-#define L2C_BASE	0xCF000000
-void s5p4418_l2c_disable(void)
-{
-	unsigned int cache_way = (1 << 16) - 1;		// there are 16 cache ways
-
-	if ((ReadIO32(L2C_BASE + 0x100) & 1) == 0)	// check ctrl enabled
-		return;
-
-	WriteIO32(L2C_BASE + 0x7fc, cache_way);		// 16 way, clean inv way
-	while (ReadIO32(L2C_BASE + 0x7fc) & cache_way)
-		;
-	WriteIO32(L2C_BASE + 0x730, 0);			// cache sync;
-
-	while (ReadIO32(L2C_BASE + 0x77c) & cache_way)	// check inv way
-		;
-	while (ReadIO32(L2C_BASE + 0x7bc) & cache_way)	// check clean way
-		;
-	while (ReadIO32(L2C_BASE + 0x7fc) & cache_way)	// check clean inv way
-		;
-	WriteIO32(L2C_BASE + 0x100, 0);			// ctrl disable
-}
-
 /*************************************************************
  * Designed to meet the the PSCI Common Interface.
  *************************************************************/
-void flushL1cache(void);
-void plat_suspend(unsigned int entrypoint)
+int psci_cpu_suspend_start(u32 entrypoint)
 {
 	/* s5pxx18 suspend mark */
-	suspend_mark(PSCI_SUSPEND, entrypoint, 0, 0x91080000, (128 * 1024));
+	suspend_mark(PSCI_SUSPEND, entrypoint);
 
+	flushL1cache();
+	s5p4418_l2c_disable();
 	/* the function for operation to go sleep */
 	system_sleep();
 	__asm__ __volatile__ ("wfi");
-}
-
-int psci_cpu_suspend_start(unsigned int entrypoint)
-{
-	flushL1cache();
-	s5p4418_l2c_disable();
-
-	plat_suspend(entrypoint);
 
 	return PSCI_E_SUCCESS;
 }
 
-void s5p4418_tee_suspend(unsigned int sec_entrypoint)
+void s5p4418_tee_suspend(u32 sec_entrypoint)
 {
-	plat_suspend(sec_entrypoint);
+	psci_cpu_suspend_start(sec_entrypoint);
 }
 
 /*************************************************************
  * Designed to meet the the PSCI Common Interface.
  *************************************************************/
-void psci_cpu_suspend_finish(unsigned int cpu_idx,
+void psci_cpu_suspend_finish(u32 cpu_idx,
 			     psci_power_state_t *state_info)
 {
 	/* Remove warning for futrue externsibility */
