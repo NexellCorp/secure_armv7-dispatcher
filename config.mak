@@ -57,11 +57,11 @@ SECURE			?= NO
 
 # cross-tool pre-header
 ifeq ($(OS),Windows_NT)
-CROSS_TOOL_TOP		=
-CROSS_TOOL		= $(CROSS_TOOL_TOP)arm-none-eabi-
+CROSS_COMPILE_TOP	?=
+CROSS_COMPILE		?= $(CROSS_COMPILE_TOP)arm-none-eabi-
 else
-CROSS_TOOL_TOP		=
-CROSS_TOOL		= $(CROSS_TOOL_TOP)arm-eabi-
+CROSS_COMPILE_TOP	?=
+CROSS_COMPILE		?= $(CROSS_COMPILE_TOP)arm-eabi-
 endif
 
 ###########################################################################
@@ -85,13 +85,13 @@ CODE_MAIN_INCLUDE	=
 # Build Environment
 ###########################################################################
 CPU			= cortex-a9
-CC			= $(CROSS_TOOL)gcc
-LD 			= $(CROSS_TOOL)ld
-AS 			= $(CROSS_TOOL)as
-AR 			= $(CROSS_TOOL)ar
-MAKEBIN			= $(CROSS_TOOL)objcopy
-OBJCOPY			= $(CROSS_TOOL)objcopy
-RANLIB 			= $(CROSS_TOOL)ranlib
+CC			= $(CROSS_COMPILE)gcc
+LD 			= $(CROSS_COMPILE)ld
+AS 			= $(CROSS_COMPILE)as
+AR 			= $(CROSS_COMPILE)ar
+MAKEBIN			= $(CROSS_COMPILE)objcopy
+OBJCOPY			= $(CROSS_COMPILE)objcopy
+RANLIB 			= $(CROSS_COMPILE)ranlib
 
 GCC_LIB			= $(shell $(CC) -print-libgcc-file-name)
 
@@ -137,6 +137,7 @@ CFLAGS			+=	-g -Wall				\
 				-Wextra -ffreestanding -fno-builtin	\
 				-msoft-float				\
 				-mlittle-endian				\
+				-mfpu=neon				\
 				-mcpu=$(CPU)				\
 				-mstructure-size-boundary=32		\
 				$(CODE_MAIN_INCLUDE)			\
