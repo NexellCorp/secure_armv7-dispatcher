@@ -85,8 +85,11 @@ void BootMain(CBOOL isresume, U32 non_secure_bl, U32 secureos_startaddr)
 	/* Build information */
 	buildinfo();
 
-	// set dram to support secure address
-	pReg_Tieoff->TIEOFFREG[24] |= 0xF << 28 | 0xF << 24 | 1 << 17 | 1 << 16;
+	/* Set sdram to support secure address */
+#if defined(CONFIG_DREX_BUS_SECURE)
+	mmio_set_32(&pReg_Tieoff->TIEOFFREG[24],
+		(0xF << 28 | 0xF << 24 | 1 << 17 | 1 << 16));
+#endif
 
 	tieoff_set_secure();	// crypto, tieoff, sram ...
 

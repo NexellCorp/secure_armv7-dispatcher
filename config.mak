@@ -55,6 +55,8 @@ endif
 
 SECURE			?= NO
 
+DREX_BUS_SECURE		?= n
+
 # cross-tool pre-header
 ifeq ($(OS),Windows_NT)
 CROSS_COMPILE_TOP	?=
@@ -145,6 +147,10 @@ CFLAGS			+=	-g -Wall				\
 				-DMEMTYPE_$(MEMTYPE)			\
 				-DCHIPID_$(CHIPNAME)			\
 				-D$(BOARD)
+
+ifeq ($(DREX_BUS_SECURE), y)
+CFLAGS			+=	-DCONFIG_DREX_BUS_SECURE
+endif
 
 ifeq ($(SYSLOG), y)
 CFLAGS			+=	-DSYSLOG_ON
