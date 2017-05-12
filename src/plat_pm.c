@@ -232,22 +232,12 @@ static void suspend_vdd_pwroff(void)
 
 	WIO32(&pReg_RTC->RTCSCRATCH, pSBI->BL2_START);
 
-	/* Save leveling & training values.*/
-	WIO32(&pReg_Alive->ALIVESCRATCHRST5, 0xFFFFFFFF);	/* clear - ctrl_shiftc */
-	WIO32(&pReg_Alive->ALIVESCRATCHRST6, 0xFFFFFFFF);	/* clear - ctrl_offsetC */
-	WIO32(&pReg_Alive->ALIVESCRATCHRST7, 0xFFFFFFFF);	/* clear - ctrl_offsetr */
-	WIO32(&pReg_Alive->ALIVESCRATCHRST8, 0xFFFFFFFF);	/* clear - ctrl_offsetw */
-
-	WIO32(&pReg_Alive->ALIVESCRATCHSET5, pSBI->GateCycle);	/* store - ctrl_shiftc */
-	WIO32(&pReg_Alive->ALIVESCRATCHSET6, pSBI->GateCode);	/* store - ctrl_offsetc */
-	WIO32(&pReg_Alive->ALIVESCRATCHSET7, pSBI->RDvwmc);	/* store - ctrl_offsetr */
-	WIO32(&pReg_Alive->ALIVESCRATCHSET8, pSBI->WRvwmc);	/* store - ctrl_offsetw */
 	WIO32(&pReg_Alive->VDDOFFCNTVALUERST, 0xFFFFFFFF);	/* clear delay counter, refrence rtc clock */
 	WIO32(&pReg_Alive->VDDOFFCNTVALUESET, 0x00000001);	/* set minimum delay time for VDDPWRON pin. 1 cycle per 32.768Kh (about 30us) */
 
 	__asm__ __volatile__ ("cpsid i");			/* core interrupt off. */
-	WIO32(&pReg_Alive->VDDCTRLSETREG, 0x000003FC);	/* Retention off (Pad hold off) */
-	WIO32(&pReg_Alive->VDDCTRLRSTREG, 0x00000001);	/* vddpoweron off, start counting down. */
+	WIO32(&pReg_Alive->VDDCTRLSETREG, 0x000003FC);		/* Retention off (Pad hold off) */
+	WIO32(&pReg_Alive->VDDCTRLRSTREG, 0x00000001);		/* vddpoweron off, start counting down. */
 
 	delay(600);     /* 600 : 110us, Delay for Pending Clear. When CPU clock is 400MHz, this value is minimum delay value. */
 
