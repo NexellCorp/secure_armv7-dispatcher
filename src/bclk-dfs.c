@@ -125,6 +125,7 @@ void s5p4418_change_pll(u32 pll_data)
 	while (RIO32(&pReg_ClkPwr->CLKMODEREG0) & (1 << 31))
 		;
 }
+
 /*******************************************************************************
  * Must be S5P4418
  * PLL Change sequence in S5P4418 (Kernel)
@@ -148,19 +149,22 @@ void s5p4418_bclk_freqchange(u32 pll_data)
 	send_directcmd(DIRCMD_PALL, DIRCMD_CHIP_0, 0, 0);
 
 	/* Step 02. Waiting for DPC Blank */
-	if (dpc_enabled(dpc_index)) {
-		dpc_set_enable_all(dpc_index, 0);
-		while (!dpc_get_pending_all(dpc_index))
-			;
+	if (!dpc_reset_check()) {
+		if (dpc_enabled(dpc_index)) {
+			dpc_set_enable_all(dpc_index, 0);
+			while (!dpc_get_pending_all(dpc_index));
+		}
 	}
 
 	/* Step 03. change to PLL(P,M,S) */
 	s5p4418_change_pll(pll_data);
 
 	/* Step 04. Clear & Waiting for DPC Blank */
-	if (dpc_enabled(dpc_index)) {
-		dpc_clear_pending_all(dpc_index);
-		dpc_set_enable_all(dpc_index, 1);
+	if (!dpc_reset_check()) {
+		if (dpc_enabled(dpc_index)) {
+			dpc_clear_pending_all(dpc_index);
+			dpc_set_enable_all(dpc_index, 1);
+		}
 	}
 
 	/* Step 05. DRAM Command - Precharge All */
@@ -195,7 +199,6 @@ void s5p4418_tee_bclk(u32 pll_data, u32 wait_flag)
 {
 	u32 read_flag = 0;
 	u32 i = 0;
-
 	/* Waiting for all other cores to be in s5p4418_tee_bclkwait() */
 	do {
 		read_flag = 0;
