@@ -39,7 +39,7 @@ SYS_OBJS	+=	non_secure.o smc_entry.o smc_handler.o sip_main.o std_svc_setup.o	\
 endif
 
 ifeq ($(MEMTYPE),DDR3)
-SYS_OBJS	+=	init_DDR3.o
+SYS_OBJS	+=	ddr3_sdram.o
 endif
 ifeq ($(MEMTYPE),LPDDR3)
 SYS_OBJS	+=	init_LPDDR3.o
@@ -54,6 +54,9 @@ endif
 SYS_OBJS_LIST	=	$(addprefix $(DIR_OBJOUTPUT)/,$(SYS_OBJS))
 
 SYS_INCLUDES	=	-I src				\
+			-I src/devices			\
+			-I src/devices/memory		\
+			-I src/devices/memory/ddr3	\
 			-I src/services			\
 			-I src/services/std_svc		\
 			-I src/services/std_svc/psci	\
@@ -75,10 +78,19 @@ $(DIR_OBJOUTPUT)/%.o: src/pmic/%.c
 	@echo [compile....$<]
 	$(Q)$(CC) -MMD $< -c -o $@ $(CFLAGS) $(SYS_INCLUDES)
 ###################################################################################################
-$(DIR_OBJOUTPUT)/%.o: src/memory/%.c
+$(DIR_OBJOUTPUT)/%.o: src/devices/%.c
 	@echo [compile....$<]
 	$(Q)$(CC) -MMD $< -c -o $@ $(CFLAGS) $(SYS_INCLUDES)
 ###################################################################################################
+$(DIR_OBJOUTPUT)/%.o: src/devices/memory/%.c
+	@echo [compile....$<]
+	$(Q)$(CC) -MMD $< -c -o $@ $(CFLAGS) $(SYS_INCLUDES)
+###################################################################################################
+$(DIR_OBJOUTPUT)/%.o: src/devices/memory/ddr3/%.c
+	@echo [compile....$<]
+	$(Q)$(CC) -MMD $< -c -o $@ $(CFLAGS) $(SYS_INCLUDES)
+###################################################################################################
+
 
 ###################################################################################################
 $(DIR_OBJOUTPUT)/%.o: src/services/%.c

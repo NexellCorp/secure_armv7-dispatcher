@@ -23,9 +23,9 @@ extern void ResetCon(U32 devicenum, CBOOL en);
 
 
 #if (CONFIG_SUSPEND_RESUME == 1)
-extern void enterSelfRefresh(void);
+extern void enter_self_refresh(void);
 extern unsigned int __calc_crc(void *addr, int len);
-extern void DMC_Delay(int milisecond);
+extern void dmc_delay(int ms);
 #endif
 
 /* External Variable */
@@ -249,7 +249,7 @@ extern U32  g_WRvwmc;
 
 extern void enterSelfRefresh(void);
 extern U32 __calc_crc(void *addr, int len);
-extern void DMC_Delay(int milisecond);
+extern void dmc_delay(int ms);
 
 void s5p4418_resume(void)
 {
@@ -318,7 +318,7 @@ static void suspend_vdd_pwroff(void)
 	mmio_write_32(&pReg_Alive->VDDCTRLSETREG, 0x000003FC);	// Retention off (Pad hold off)
 	mmio_write_32(&pReg_Alive->VDDCTRLRSTREG, 0x00000001);	// vddpoweron off, start counting down.
 
-	DMC_Delay(600);     // 600 : 110us, Delay for Pending Clear. When CPU clock is 400MHz, this value is minimum delay value.
+	dmc_delay(600);     // 600 : 110us, Delay for Pending Clear. When CPU clock is 400MHz, this value is minimum delay value.
 
 	mmio_write_32(&pReg_Alive->ALIVEGPIODETECTPENDREG, 0xFF);	// all alive pend pending clear until power down.
 //	mmio_write_32(&pReg_Alive->ALIVEPWRGATEREG, 0x00000000);	// alive power gate close
@@ -339,7 +339,7 @@ static void suspend_vdd_pwroff(void)
  ************************************************************/
 void s5p4418_suspend(void)
 {
-	enterSelfRefresh();
+	enter_self_refresh();
 	suspend_vdd_pwroff();
 }
 #endif	// #if (CONFIG_SUSPEND_RESUME == 1)
