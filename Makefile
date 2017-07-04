@@ -30,25 +30,17 @@ SYS_OBJS	+=	startup.o armv7_libs.o clockinit.o armv7_dispatcher.o subcpu.o	\
 			plat_pm.o ema.o resetcon.o GPIO.o debug.o util.o CRC32.o	\
 			gic.o arm_gic.o dpc.o buildinfo.o printf.o
 
-#SYS_OBJS	+=	sysbus.o
-
-ifeq ($(SECURE), NO)
+ifeq ($(ARM_SECURE), n)
 SYS_OBJS	+=	non_secure.o smc_entry.o smc_handler.o sip_main.o std_svc_setup.o	\
 			arm_topology.o psci_system_off.o psci_off.o psci_on.o 			\
 			psci_suspend.o psci_common.o psci_main.o bclk-dfs.o
 endif
 
-ifeq ($(MEMTYPE),DDR3)
+ifeq ($(MEMTYPE),ddr3)
 SYS_OBJS	+=	ddr3_sdram.o
 endif
-ifeq ($(MEMTYPE),LPDDR3)
-SYS_OBJS	+=	init_LPDDR3.o
-endif
-
-#SYS_OBJS	+=	nx_tieoff.o
-
-ifeq ($(INITPMIC),YES)
-SYS_OBJS	+=	i2c_gpio.o pmic.o
+ifeq ($(MEMTYPE),lpddr3)
+SYS_OBJS	+=	lpddr3_sdram.o
 endif
 
 SYS_OBJS_LIST	=	$(addprefix $(DIR_OBJOUTPUT)/,$(SYS_OBJS))
