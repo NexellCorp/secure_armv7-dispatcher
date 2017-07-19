@@ -27,7 +27,7 @@ LDFLAGS		=	-Bstatic						\
 SYS_OBJS	+=	startup.o armv7_libs.o armv7_dispatcher.o subcpu.o	\
 			plat_pm.o resetcon.o GPIO.o debug.o CRC32.o		\
 			gic.o arm_gic.o dpc.o buildinfo.o printf.o		\
-			util.o util_arm.o non_secure.o 
+			util.o util_arm.o non_secure.o watchdog.o
 
 
 SYS_OBJS	+=	smc_entry.o smc_handler.o sip_main.o std_svc_setup.o	\

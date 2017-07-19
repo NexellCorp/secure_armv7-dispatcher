@@ -225,6 +225,8 @@ void s5p4418_resume(void)
 
 static void suspend_vdd_pwroff(void)
 {
+	register unsigned int alive_pend;
+
 	// Clear USE_WFI & USE_WFE bits for STOP mode.
 	CIO32(&pReg_ClkPwr->PWRCONT, (0xFF << 8));
 	// alive power gate open
@@ -242,12 +244,18 @@ static void suspend_vdd_pwroff(void)
 	delay(600);     /* 600 : 110us, Delay for Pending Clear. When CPU clock is 400MHz, this value is minimum delay value. */
 
 	WIO32(&pReg_Alive->ALIVEGPIODETECTPENDREG, 0xFF);	/* all alive pend pending clear until power down. */
-//	WIO32(&pReg_Alive->ALIVEPWRGATEREG, 0x00000000);	/* alive power gate close */
 
-	while (1) {
-		WIO32(&pReg_ClkPwr->PWRMODE, (0x1 << 1)); 	/* enter STOP mode. */
-		__asm__ __volatile__ ("wfi");			/* now real entering point to stop mode. */
-	}							/* this time, core power will off and so cpu will die. */
+	/* Suspend A defense code for the failure sequence. */
+	delay(0x2000);
+
+	WIO32(&pReg_Alive->ALIVESCRATCHRSTREG, 0xFFFFFFFF);
+	WIO32(&pReg_Alive->ALIVESCRATCHSETREG, SUSPEND_FAILED_RESUME);
+
+	WIO32(&pReg_Alive->ALIVEPWRGATEREG, 0x00000000);	/* alive power gate close */
+	delay(0x200);
+
+	watchdog_start(0x3333);
+	while(1);
 }
 
 
