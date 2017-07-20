@@ -16,9 +16,8 @@
 #include <sysheader.h>
 
 #define DPC_BASEADDR		0xC0102800
-#define DPCCTRL0		0x118
 
-#define RSTCON_BASEADDR		0xC0010000
+#define DPCCTRL0		0x118
 
 static inline void* dpc_get_baseaddr(u32 module)
 {
@@ -64,16 +63,4 @@ int  dpc_enabled(u32 module)
 	value = RIO32(base + DPCCTRL0);
 
 	return value & (1 << 15);
-}
-
-int dpc_reset_check(void)
-{
-	void* base = (void*)RSTCON_BASEADDR;
-	int value;
-
-	value = ((RIO32(base + 0x2000) >> 9) & 0x3);
-	if (!value)
-		return 1;
-
-	return 0;
 }
