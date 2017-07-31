@@ -28,8 +28,13 @@ void psci_system_off(void)
 /*************************************************************
  * System Reset the Reference Fucntion
  *************************************************************/
-void psci_system_reset(void)
+void psci_system_reset(unsigned int reason)
 {
+	if (reason != 0) {
+		mmio_write_32(&pReg_Alive->ALIVESCRATCHRST1, 0xFFFFFFFF);
+		mmio_write_32(&pReg_Alive->ALIVESCRATCHSET1, reason);
+	}
+
 	/* s5p4418 Reset  */
 	s5p4418_reset_cpu();
 }

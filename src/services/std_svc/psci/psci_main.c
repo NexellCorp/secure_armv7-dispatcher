@@ -29,7 +29,7 @@ extern int  psci_cpu_on_start(unsigned int target_cpu, unsigned int entrypoint);
 extern int  psci_do_cpu_off(unsigned int cpu_id);
 
 extern void psci_system_off(void);
-extern void psci_system_reset(void);
+extern void psci_system_reset(unsigned int reason);
 extern int  psci_cpu_suspend_start(unsigned int entrypoint);
 
 /* External Variable */
@@ -185,7 +185,7 @@ int psci_smc_handler(
 			break;
 
 		case PSCI_SYSTEM_RESET:
-			psci_system_reset();
+			psci_system_reset(x1);
 			WARN("PSCI_SYSTEM_RESET\r\n");
 			/* We should never return from psci_system_reset() */
 			break;

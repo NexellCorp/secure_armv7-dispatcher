@@ -37,6 +37,6 @@ void psci_cpu_suspend_finish(unsigned int cpu_idx, psci_power_state_t *state_inf
 
 /* Private exported functions from psci_system_off.c */
 void psci_system_off(void);
-void psci_system_reset(void);
+void psci_system_reset(unsigned int);
 
 #endif /* __PSCI_PRIVATE_H__ */
