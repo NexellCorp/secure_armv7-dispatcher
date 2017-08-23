@@ -246,7 +246,7 @@ static void suspend_vdd_pwroff(void)
 	WIO32(&pReg_Alive->ALIVEGPIODETECTPENDREG, 0xFF);	/* all alive pend pending clear until power down. */
 
 	/* Suspend A defense code for the failure sequence. */
-	delay(0x2000);
+	delay(0x20000);
 
 	WIO32(&pReg_Alive->ALIVESCRATCHRSTREG, 0xFFFFFFFF);
 	WIO32(&pReg_Alive->ALIVESCRATCHSETREG, SUSPEND_FAILED_RESUME);
