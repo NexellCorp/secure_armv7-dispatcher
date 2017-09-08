@@ -42,6 +42,12 @@ struct {
 	void (*tee_bclkwait)(void);
 	void (*tee_bclk)(u32, int);
 	void (*tee_suspend)(u32);
+	u32 rpmb_low;
+	u32 rpmb_high;
+	u32 huk1_addr;
+	u32 huk1_size;
+	u32 huk2_addr;
+	u32 huk2_size;
 }g_bootarg_tee;
 
 void secureos_bootarg(void)
@@ -67,6 +73,12 @@ void secureos_bootarg(void)
 		g_bootarg_tee.tee_bclkwait = &s5p4418_tee_bclkwait;
 		g_bootarg_tee.tee_bclk = &s5p4418_tee_bclk;
 		g_bootarg_tee.tee_suspend = &s5p4418_tee_suspend;
+		g_bootarg_tee.rpmb_low = (*(u32 *)0xB0FB0200) & 0xFFFF;
+		g_bootarg_tee.rpmb_high = ((*(u32 *)0xB0FB0200) >> 16) & 0xFFFF;
+		g_bootarg_tee.huk1_addr = 0xB0FB0100;
+		g_bootarg_tee.huk1_size = 128;
+		g_bootarg_tee.huk2_addr = 0xB0FB0000;
+		g_bootarg_tee.huk2_size = 256;
 	}
 }
 
