@@ -244,14 +244,11 @@ static void suspend_vdd_pwroff(void)
 	delay(600);     /* 600 : 110us, Delay for Pending Clear. When CPU clock is 400MHz, this value is minimum delay value. */
 
 	WIO32(&pReg_Alive->ALIVEGPIODETECTPENDREG, 0xFF);	/* all alive pend pending clear until power down. */
+	WIO32(&pReg_Alive->ALIVEPWRGATEREG, 0x00000000);	/* alive power gate close */
 
 	/* Suspend A defense code for the failure sequence. */
 	delay(0x20000);
 
-	WIO32(&pReg_Alive->ALIVESCRATCHRSTREG, 0xFFFFFFFF);
-	WIO32(&pReg_Alive->ALIVESCRATCHSETREG, SUSPEND_FAILED_RESUME);
-
-	WIO32(&pReg_Alive->ALIVEPWRGATEREG, 0x00000000);	/* alive power gate close */
 	delay(0x200);
 
 	watchdog_start(0x3333);
