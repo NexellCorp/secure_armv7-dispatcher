@@ -17,21 +17,19 @@
  */
 #include <sysheader.h>
 #include <gic.h>
+#include <nx_chip.h>
+#include <nx_wdt.h>
+#include <nx_rstcon.h>
 
 /* External Function */
 extern void ResetCon(U32 devicenum, CBOOL en);
-
 
 #if (CONFIG_SUSPEND_RESUME == 1)
 extern void enter_self_refresh(void);
 extern unsigned int __calc_crc(void *addr, int len);
 extern void dmc_delay(int ms);
-#endif
+extern void watchdog_start(unsigned short wtcnt);
 
-/* External Variable */
-extern volatile int g_subcpu_num;
-extern volatile int g_cpu_kill_num;
-#if (CONFIG_SUSPEND_RESUME == 1)
 extern unsigned int  g_GateCycle;
 extern unsigned int  g_GateCode;
 extern unsigned int  g_RDvwmc;
@@ -242,14 +240,28 @@ void s5p4418_reset_cpu(void)
 }
 
 #if (CONFIG_SUSPEND_RESUME == 1)
-extern U32  g_GateCycle;
-extern U32  g_GateCode;
-extern U32  g_RDvwmc;
-extern U32  g_WRvwmc;
+void watchdog_start(unsigned short wtcnt)
+{
+	U32 regvalue;
+	struct NX_WDT_RegisterSet *pwdt =
+		(struct NX_WDT_RegisterSet *)PHY_BASEADDR_WDT_MODULE;
+	struct NX_RSTCON_RegisterSet *prstcon =
+		(struct NX_RSTCON_RegisterSet *)PHY_BASEADDR_RSTCON_MODULE;
 
-extern void enterSelfRefresh(void);
-extern U32 __calc_crc(void *addr, int len);
-extern void dmc_delay(int ms);
+	regvalue = mmio_read_32(
+		(unsigned int)&prstcon->REGRST[RESETINDEX_OF_WDT_MODULE_PRESETn >> 5]);
+	mmio_write_32(
+		(unsigned int)&prstcon->REGRST[RESETINDEX_OF_WDT_MODULE_PRESETn >> 5],
+		regvalue | 3 << (RESETINDEX_OF_WDT_MODULE_PRESETn & (32 - 1)));
+
+	regvalue = 0xff << 8 |					/* prescaler value */
+				WDT_CLOCK_DIV128 << 3 |		/* division factor */
+				0x1 << 2;					/* reset enable */
+
+	mmio_write_32((unsigned int)&pwdt->WTCON, regvalue);
+	mmio_write_32((unsigned int)&pwdt->WTCNT, wtcnt & 0xffff); /* reset cnt */
+	mmio_write_32((unsigned int)&pwdt->WTCON, regvalue | 1 << 5); /* now reset */
+}
 
 void s5p4418_resume(void)
 {
@@ -321,7 +333,9 @@ static void suspend_vdd_pwroff(void)
 	dmc_delay(600);     // 600 : 110us, Delay for Pending Clear. When CPU clock is 400MHz, this value is minimum delay value.
 
 	mmio_write_32(&pReg_Alive->ALIVEGPIODETECTPENDREG, 0xFF);	// all alive pend pending clear until power down.
-//	mmio_write_32(&pReg_Alive->ALIVEPWRGATEREG, 0x00000000);	// alive power gate close
+	mmio_write_32(&pReg_Alive->ALIVEPWRGATEREG, 0x00000000);	// alive power gate close
+
+	watchdog_start(0x100);
 
 	while (1) {
 		mmio_write_32(&pReg_ClkPwr->PWRMODE, (0x1 << 1)); 	// enter STOP mode.
