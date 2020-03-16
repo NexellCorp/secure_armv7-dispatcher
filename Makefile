@@ -126,12 +126,12 @@ else
 	fi;
 endif
 
-link:
+link: $(SYS_OBJS_LIST)
 	@echo [link.... $(DIR_TARGETOUTPUT)/$(TARGET_NAME).elf]
 
 	$(Q)$(CC) $(SYS_OBJS_LIST) $(LDFLAGS) -o $(DIR_TARGETOUTPUT)/$(TARGET_NAME).elf
 
-bin:
+bin: link
 	@echo [binary.... $(DIR_TARGETOUTPUT)/$(TARGET_NAME).bin]
 	$(Q)$(MAKEBIN) -O binary $(DIR_TARGETOUTPUT)/$(TARGET_NAME).elf $(DIR_TARGETOUTPUT)/$(TARGET_NAME).bin
 ifeq ($(OS),Windows_NT)
