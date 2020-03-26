@@ -106,7 +106,7 @@ $(DIR_OBJOUTPUT)/%.o: src/services/std_svc/psci/%.S
 	$(Q)$(CC) -MMD $< -c -o $@ $(ASFLAG) $(CFLAGS) $(SYS_INCLUDES)
 ###################################################################################################
 
-all: mkobjdir $(SYS_OBJS_LIST) link bin
+all: mkobjdir startup $(SYS_OBJS_LIST) link bin
 
 mkobjdir:
 ifeq ($(OS),Windows_NT)
@@ -125,6 +125,10 @@ else
 		$(MKDIR) $(DIR_TARGETOUTPUT);		\
 	fi;
 endif
+
+startup:
+	@echo [compile....startup.S]
+	$(Q)$(CC) -MMD src/startup.S -c -o $@ $(ASFLAG) $(CFLAGS) $(SYS_INCLUDES)
 
 link: $(SYS_OBJS_LIST)
 	@echo [link.... $(DIR_TARGETOUTPUT)/$(TARGET_NAME).elf]
